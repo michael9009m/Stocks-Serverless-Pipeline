@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Top Movers</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Daily Top Movers</h1>
+        <p class="subtitle">Tracking the biggest daily % change across our watchlist</p>
+
+        <!-- Watchlist display -->
+        <div class="watchlist">
+            <span>Watchlist:</span>
+            <span class="ticker-badge">AAPL</span>
+            <span class="ticker-badge">MSFT</span>
+            <span class="ticker-badge">GOOGL</span>
+            <span class="ticker-badge">AMZN</span>
+            <span class="ticker-badge">TSLA</span>
+            <span class="ticker-badge">NVDA</span>
+        </div>
+
+        <!-- Loading and error states -->
+        <div id="loading">Loading data...</div>
+        <div id="error" class="hidden">Failed to load data. Please try again later.</div>
+
+        <!-- Results table -->
+        <table id="movers-table" class="hidden">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ticker</th>
+                    <th>% Change</th>
+                    <th>Closing Price</th>
+                </tr>
+            </thead>
+            <tbody id="movers-body">
+            </tbody>
+        </table>
+
+        <p class="footer">Data updates daily after market close • Powered by AWS Lambda + DynamoDB</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

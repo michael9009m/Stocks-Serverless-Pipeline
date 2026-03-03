@@ -221,3 +221,19 @@ __marimo__/
 credentials
 
 .env
+
+
+# Python packages installed into Lambda directories
+lambdas/ingestion/bin/
+lambdas/ingestion/certifi/
+lambdas/ingestion/certifi-*.dist-info/
+lambdas/ingestion/charset_normalizer/
+lambdas/ingestion/charset_normalizer-*.dist-info/
+lambdas/ingestion/idna/
+lambdas/ingestion/idna-*.dist-info/
+lambdas/ingestion/requests/
+lambdas/ingestion/requests-*.dist-info/
+lambdas/ingestion/urllib3/
+lambdas/ingestion/urllib3-*.dist-info/
+lambdas/ingestion/output.json
+output.json

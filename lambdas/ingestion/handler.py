@@ -2,7 +2,7 @@ import json
 import os
 import boto3
 import requests
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 # AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -25,16 +25,24 @@ def get_api_key():
 def get_stock_data(ticker, api_key):
     """Fetch previous day open and close price for a single ticker"""
     try:
-        url = f"https://api.polygon.io/v1/open-close/{ticker}/prev"
-        params = {"apiKey": api_key}
+        # Using the v2 aggregates endpoint which returns previous day OHLC data
+        url = f"https://api.massive.com/v2/aggs/ticker/{ticker}/prev"
+        params = {
+            "adjusted": "true",
+            "apiKey": api_key
+        }
         response = requests.get(url, params=params, timeout=10)
-
-        # Raise exception if we get a bad status code
         response.raise_for_status()
         data = response.json()
 
-        open_price = data['open']
-        close_price = data['close']
+        # Check the API returned results
+        if data.get('status') != 'OK' or not data.get('results'):
+            print(f"NO DATA for {ticker}: {data.get('status')}")
+            return None
+
+        result = data['results'][0]
+        open_price = result['o']
+        close_price = result['c']
 
         # Calculate percentage change formula from project requirements
         pct_change = ((close_price - open_price) / open_price) * 100
@@ -88,25 +96,27 @@ def lambda_handler(event, context):
         top_mover = max(results, key=lambda x: abs(x['pct_change']))
         print(f"Top mover: {top_mover['ticker']} with {top_mover['pct_change']:.2f}% change")
 
+        # Use yesterday's date since /prev endpoint returns previous trading day data
+        # This must be set BEFORE writing to DynamoDB
+        trading_date = (date.today() - timedelta(days=1)).isoformat()
+
         # Store result in DynamoDB
         table_name = os.environ['DYNAMODB_TABLE_NAME']
         table = dynamodb.Table(table_name)
 
-        today = date.today().isoformat()
-
         table.put_item(Item={
-            'date': today,
+            'date': trading_date,
             'ticker': top_mover['ticker'],
             'pct_change': str(round(top_mover['pct_change'], 4)),
             'close_price': str(top_mover['close_price'])
         })
 
-        print(f"Successfully stored top mover for {today}")
+        print(f"Successfully stored top mover for {trading_date}")
 
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'date': today,
+                'date': trading_date,
                 'ticker': top_mover['ticker'],
                 'pct_change': round(top_mover['pct_change'], 4),
                 'close_price': top_mover['close_price']
