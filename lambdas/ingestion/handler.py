@@ -2,7 +2,7 @@ import json
 import os
 import boto3
 import requests
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 # AWS clients
 dynamodb = boto3.resource('dynamodb')
@@ -25,7 +25,6 @@ def get_api_key():
 def get_stock_data(ticker, api_key):
     """Fetch previous day open and close price for a single ticker"""
     try:
-        # Using the v2 aggregates endpoint which returns previous day OHLC data
         url = f"https://api.massive.com/v2/aggs/ticker/{ticker}/prev"
         params = {
             "adjusted": "true",
@@ -35,7 +34,6 @@ def get_stock_data(ticker, api_key):
         response.raise_for_status()
         data = response.json()
 
-        # Check the API returned results
         if data.get('status') != 'OK' or not data.get('results'):
             print(f"NO DATA for {ticker}: {data.get('status')}")
             return None
@@ -44,13 +42,20 @@ def get_stock_data(ticker, api_key):
         open_price = result['o']
         close_price = result['c']
 
+        # Get the actual trading date directly from the API timestamp
+        # Timestamp is in milliseconds so divide by 1000
+        trading_date = datetime.fromtimestamp(
+            result['t'] / 1000, tz=timezone.utc
+        ).strftime('%Y-%m-%d')
+
         # Calculate percentage change formula from project requirements
         pct_change = ((close_price - open_price) / open_price) * 100
 
         return {
             'ticker': ticker,
             'pct_change': pct_change,
-            'close_price': close_price
+            'close_price': close_price,
+            'trading_date': trading_date
         }
 
     except requests.exceptions.Timeout:
@@ -96,9 +101,8 @@ def lambda_handler(event, context):
         top_mover = max(results, key=lambda x: abs(x['pct_change']))
         print(f"Top mover: {top_mover['ticker']} with {top_mover['pct_change']:.2f}% change")
 
-        # Use yesterday's date since /prev endpoint returns previous trading day data
-        # This must be set BEFORE writing to DynamoDB
-        trading_date = (date.today() - timedelta(days=1)).isoformat()
+        # Use the actual trading date from the API response
+        trading_date = top_mover['trading_date']
 
         # Store result in DynamoDB
         table_name = os.environ['DYNAMODB_TABLE_NAME']
