@@ -104,7 +104,7 @@ resource "aws_lambda_function" "api" {
 
 resource "aws_cloudwatch_event_rule" "daily_trigger" {
   name = "${var.project_name}-daily-trigger"
-  schedule_expression = "cron(0 21 * * ? *)"
+  schedule_expression = "cron(30 0 * * ? *)"
 }
 
 resource "aws_cloudwatch_event_target" "trigger_ingestion" {
